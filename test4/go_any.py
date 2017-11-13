@@ -148,7 +148,7 @@ def go_forward_any_alignment(rspeed, lspeed):
     if lspeed == 0:
         GPIO.output(MotorLeft_PWM,GPIO.HIGH)
     else:
-        GPIO.ouput(MotorLeft_PWM, GPIO.LOW)
+        GPIO.output(MotorLeft_PWM, GPIO.LOW)
     leftmotor(forward1)
     LeftPwm.ChangeDutyCycle(lspeed)
 
