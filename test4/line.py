@@ -11,7 +11,7 @@ GPIO.setwarnings(False)
 # set up GPIO mode as BOARD
 # =======================================================================
 GPIO.setmode(GPIO.BOARD)
-
+    
 
 
 # =======================================================================
@@ -90,31 +90,22 @@ def calculatePower():
     right = 30
 
     incLevel = [10, 8]
-
     if (signal_list[0]):
         right += incLevel[0] 
-    elif (signal_list[1]):
+    if (signal_list[1]):
         right += incLevel[1]
 
     return (left, right)
 
 def get_tracksensor():
-    return [GPIO.input(leftmostled), GPIO.input(leftlessled), GPIO.input(centerled), GPIO.input(rightlessled), GPIO.input(rightmostled)]
+    ret = [GPIO.input(leftmostled), GPIO.input(leftlessled), GPIO.input(centerled), GPIO.input(rightlessled), GPIO.input(rightmostled)]
+    return list(map(lambda x : not x, ret))
 
 if __name__ == "__main__":
     try:
         while True:
-        print("-------------------------------------------------------------------------------------")
-        print("leftmostled  detects black line(0) or white ground(1): " + str(GPIO.input(leftmostled)))
-        print("leftlessled  detects black line(0) or white ground(1): " + str(GPIO.input(leftlessled)))
-        print("centerled    detects black line(0) or white ground(1): " + str(GPIO.input(centerled)))
-        print("rightlessled detects black line(0) or white ground(1): " + str(GPIO.input(rightlessled)))
-        print("rightmostled detects black line(0) or white ground(1): " + str(GPIO.input(rightmostled)))
-        speed = calculatePower()
-        go_forward_any_alignment(speed[0], speed[1])
-        
-
-        time.sleep(1)
+            speed = calculatePower()
+            go_forward_any_alignment(speed[0], speed[1])
 
     except KeyboardInterrupt:
         GPIO.cleanup()
