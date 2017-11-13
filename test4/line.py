@@ -84,18 +84,25 @@ GPIO.setup(rightmostled, GPIO.IN)
 #
 # =======================================================================
 
+sensor_weight = [-10, -5, 0, 5, 10]
 def calculatePower():
     signal_list = get_tracksensor()
-    left = 30
-    right = 30
+    left = 40
+    right = 40
 
-    incLevel = [10, 8]
-    if (signal_list[0]):
-        right += incLevel[0] 
-    if (signal_list[1]):
-        right += incLevel[1]
+    weight_sum = 0
+    for idx in range(len(sensor_weight)):
+        if signal_list[idx]:
+            weight_sum += sensor_weight[idx]
 
-    return (left, right)
+    if weight_sum < 0:
+        left += weight_sum
+        right -= weight_sum
+    else:
+        left -= weight_sum
+        right += weight_sum
+
+    return (right, left)
 
 def get_tracksensor():
     ret = [GPIO.input(leftmostled), GPIO.input(leftlessled), GPIO.input(centerled), GPIO.input(rightlessled), GPIO.input(rightmostled)]
@@ -105,6 +112,7 @@ if __name__ == "__main__":
     try:
         while True:
             speed = calculatePower()
+#right, left 순서로
             go_forward_any_alignment(speed[0], speed[1])
 
     except KeyboardInterrupt:
