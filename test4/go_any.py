@@ -138,17 +138,13 @@ RightPwm = GPIO.PWM(MotorRight_PWM, 100)
 before_rspeed  = 0
 before_lspeed = 0
 def go_forward_any_alignment(rspeed, lspeed):
-    if rspeed == 0:
-        GPIO.output(MotorRight_PWM, GPIO.LOW)
-    else:
-        GPIO.output(MotorRight_PWM, GPIO.HIGH)
+    if before_lspeed == lspeed and before_rspeed == rspeed:
+        return
+    GPIO.output(MotorRight_PWM,GPIO.HIGH)
     rightmotor(forward0)
     RightPwm.ChangeDutyCycle(rspeed)
 
-    if lspeed == 0:
-        GPIO.output(MotorLeft_PWM,GPIO.HIGH)
-    else:
-        GPIO.ouput(MotorLeft_PWM, GPIO.LOW)
+    GPIO.output(MotorLeft_PWM,GPIO.HIGH)
     leftmotor(forward1)
     LeftPwm.ChangeDutyCycle(lspeed)
 
@@ -192,7 +188,7 @@ def go_forward(speed, running_time):
     GPIO.output(MotorLeft_PWM,GPIO.HIGH)
     leftmotor(forward1)
     LeftPwm.ChangeDutyCycle(speed)
-    sleep(running_time)
+    time.sleep(running_time)
 
 # student assignment (6)
 
@@ -210,7 +206,7 @@ def go_backward(speed, running_time):
     GPIO.output(MotorLeft_PWM,GPIO.HIGH)
     leftmotor(backward1)
     LeftPwm.ChangeDutyCycle(speed)
-    sleep(running_time)
+    time.sleep(running_time)
 
 
 # student assignment (7)

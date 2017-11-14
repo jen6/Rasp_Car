@@ -1,5 +1,5 @@
 import RPi.GPIO as GPIO
-from go_any import go_forward_any_alignment
+from go_any import *
 import time
 
 # =======================================================================
@@ -13,6 +13,7 @@ GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD)
     
 
+pwm_setup()
 
 # =======================================================================
 # declare the pins of 16, 18, 22, 40, 32 in the Rapberry Pi
@@ -84,23 +85,34 @@ GPIO.setup(rightmostled, GPIO.IN)
 #
 # =======================================================================
 
-sensor_weight = [-10, -5, 0, 5, 10]
+sensor_weight = [-9, -2, 0,3, 9]
+last_error = 0
 def calculatePower():
+    left = 50
+    right = 50
+    kp, kd = 6.4, 2.3
+    global last_error
     signal_list = get_tracksensor()
-    left = 40
-    right = 40
 
-    weight_sum = 0
+
+    error = 0
     for idx in range(len(sensor_weight)):
         if signal_list[idx]:
-            weight_sum += sensor_weight[idx]
+            error += sensor_weight[idx]
+    pv = kp * error + kd * (error - last_error)
+    last_error = error
 
-    if weight_sum < 0:
-        left += weight_sum
-        right -= weight_sum
-    else:
-        left -= weight_sum
-        right += weight_sum
+    if pv > 50:
+        pv = 50
+    if pv < -50:
+        pv = -50
+
+    if pv < 0:
+        left += pv
+        right -= pv
+    elif pv >= 0:
+        left += pv
+        right -= pv
 
     return (right, left)
 
@@ -111,10 +123,14 @@ def get_tracksensor():
 if __name__ == "__main__":
     try:
         while True:
-            speed = calculatePower()
-#right, left 순서로
-            go_forward_any_alignment(speed[0], speed[1])
+            right, left = calculatePower()
+            print(right, left)
+#right, left
+            go_forward_any_alignment(right, left)
+            sleep(0.1)
 
     except KeyboardInterrupt:
-        GPIO.cleanup()
+        pwm_low()
+    finally:
+        pwm_low()
 
