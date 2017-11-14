@@ -2,6 +2,7 @@ import RPi.GPIO as GPIO
 from go_any import *
 from ultraModule import *
 import time
+from functools import reduce
 
 # =======================================================================
 #  set GPIO warnings as :false
@@ -97,11 +98,19 @@ def calculatePower():
 
 
     error = 0
+    flag = False
     for idx in range(len(sensor_weight)):
         if signal_list[idx]:
+            flag = flag or True
             error += sensor_weight[idx]
-    pv = kp * error + kd * (error - last_error)
-    last_error = error
+
+    pv = 0
+    if not flag:
+        print("return to coruse")
+        pv = kp * last_error
+    else:
+        pv = kp * error + kd * (error - last_error)
+        last_error = error
 
     if pv > 50:
         pv = 50
@@ -118,28 +127,27 @@ def calculatePower():
     return (right, left)
 
 def Avoiding():
-    stop()
-    sleep(0.2)
-    left = 50
-    right = 50
-    tempVariable = [30, 30]
-    t = [0.3, 0.4, 0.3]
-    go_forward_any_alignment(70, 10)
-    print("turn")
-    sleep(t[0])
-    go_forward_any_alignment(left, right)
-    print("forward")
-    sleep(t[1])
-    go_forward_any_alignment(10, 70)
-    print("last turn")
-    sleep(t[2])
+    while  is_on_track():
+        go_forward_any_alignment(10, 90)
+        sleep(0.2)
+    go_forward_any_alignment(50, 50)
+    sleep(0.6)
+    while not  is_on_track():
+        print("are you?")
+        go_forward_any_alignment(70, 10)
+        sleep(0.2)
 
 def get_tracksensor():
     ret = [GPIO.input(leftmostled), GPIO.input(leftlessled), GPIO.input(centerled), GPIO.input(rightlessled), GPIO.input(rightmostled)]
     return list(map(lambda x : not x, ret))
 
+def is_on_track():
+    ret = get_tracksensor()
+    result = reduce(lambda a, b: a or b, ret, False)
+    return result
+
 if __name__ == "__main__":
-    dist = 35
+    dist = 30
     count = 0
     try:
         while True:
