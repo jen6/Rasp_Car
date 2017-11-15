@@ -87,13 +87,15 @@ GPIO.setup(rightmostled, GPIO.IN)
 #
 # =======================================================================
 
-sensor_weight = [-9, -2, 0,3, 9]
+sensor_weight = [-9, -2, 0,2, 9]
 last_error = 0
+error_sum = 0
+dt = 0.1
 def calculatePower():
     left = 50
     right = 50
-    kp, kd = 6.4, 2.3
-    global last_error
+    kp, kd, ki = 8, 22, 0.4
+    global last_error, error_sum
     signal_list = get_tracksensor()
 
 
@@ -109,13 +111,14 @@ def calculatePower():
         print("return to coruse")
         pv = kp * last_error
     else:
-        pv = kp * error + kd * (error - last_error)
+        error_sum += error * dt
+        pv = kp * error + kd * (error - last_error) + ki * error_sum
         last_error = error
 
-    if pv > 50:
-        pv = 50
-    if pv < -50:
-        pv = -50
+    if pv > 40:
+        pv = 40
+    if pv < -40:
+        pv = -40
 
     if pv < 0:
         left += pv
@@ -148,6 +151,7 @@ def is_on_track():
 
 if __name__ == "__main__":
     dist = 30
+#    dist = 0
     count = 0
     try:
         while True:
