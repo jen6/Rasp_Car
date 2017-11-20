@@ -90,7 +90,7 @@ GPIO.setup(rightmostled, GPIO.IN)
 sensor_weight = [-9, -2, 0,2, 9]
 last_error = 0
 error_sum = 0
-dt = 0.1
+dt = 0.02
 def calculatePower():
     left = 50
     right = 50
@@ -100,12 +100,15 @@ def calculatePower():
 
 
     error = 0
+    sensor_cnt = 0
     flag = False
     for idx in range(len(sensor_weight)):
         if signal_list[idx]:
+            sensor_cnt += 1
             flag = flag or True
             error += sensor_weight[idx]
-
+            
+    error = error / sensor_cnt
     pv = 0
     if not flag:
         print("return to coruse")
@@ -166,7 +169,7 @@ if __name__ == "__main__":
             print(right, left)
 #right, eft
             go_forward_any_alignment(right, left)
-            sleep(0.1)
+            sleep(0.02)
 
     except KeyboardInterrupt:
         pwm_low()
