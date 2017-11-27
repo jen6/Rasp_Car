@@ -91,34 +91,52 @@ sensor_weight = [-9, -2, 0,2, 9]
 last_error = 0
 error_sum = 0
 dt = 0.1
+avoid_flag = False
+
+
 def calculatePower():
     left = 50
     right = 50
-    kp, kd, ki = 8, 22, 0.4
+    turn_left = 50
+    turn_right = 50
+    kp, kd, ki = 12, 15, 0.4
+#    kp, kd, ki = 10, 17, 0.2
     global last_error, error_sum
     signal_list = get_tracksensor()
+    print(signal_list)
 
+    if is_finishline(signal_list):
+        print("stop")
+        stop()
+        return (0, 0)
 
     error = 0
+    sensor_cnt = 0
     flag = False
     for idx in range(len(sensor_weight)):
         if signal_list[idx]:
+            sensor_cnt += 1
             flag = flag or True
             error += sensor_weight[idx]
+    if sensor_cnt == 2:
+        error = error/2
 
     pv = 0
+    error_derive = 0
     if not flag:
         print("return to coruse")
         pv = kp * last_error
     else:
         error_sum += error * dt
-        pv = kp * error + kd * (error - last_error) + ki * error_sum
+        error_derive = error - last_error
+        pv = kp * error + kd * error_derive + ki * error_sum
         last_error = error
+    print("error_derive : ", error_derive)
 
-    if pv > 40:
-        pv = 40
-    if pv < -40:
-        pv = -40
+    if pv > 50:
+        pv = 50
+    if pv < -50:
+        pv = -50
 
     if pv < 0:
         left += pv
@@ -131,14 +149,18 @@ def calculatePower():
 
 def Avoiding():
     while  is_on_track():
-        go_forward_any_alignment(10, 90)
+        go_forward_any_alignment(10, 45)
         sleep(0.2)
     go_forward_any_alignment(50, 50)
-    sleep(0.6)
+    sleep(0.5)
     while not  is_on_track():
         print("are you?")
-        go_forward_any_alignment(70, 10)
+        go_forward_any_alignment(80, 10)
         sleep(0.2)
+
+    #to back line
+    global last_error
+    last_error = 70
 
 def get_tracksensor():
     ret = [GPIO.input(leftmostled), GPIO.input(leftlessled), GPIO.input(centerled), GPIO.input(rightlessled), GPIO.input(rightmostled)]
@@ -148,6 +170,13 @@ def is_on_track():
     ret = get_tracksensor()
     result = reduce(lambda a, b: a or b, ret, False)
     return result
+
+def is_finishline(sensor):
+    n = 0
+    for s in sensor:
+        if s:
+            n += 1
+    return n>= 4
 
 if __name__ == "__main__":
     dist = 30
@@ -162,6 +191,9 @@ if __name__ == "__main__":
                     count = 0
 
             right, left = calculatePower()
+            if right== 0 and left == 0:
+                stop()
+                break
             count += 1
             print(right, left)
 #right, eft

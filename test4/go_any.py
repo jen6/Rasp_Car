@@ -140,6 +140,15 @@ before_lspeed = 0
 def go_forward_any_alignment(rspeed, lspeed):
     if before_lspeed == lspeed and before_rspeed == rspeed:
         return
+    if rspeed < 0 :
+        rspeed = 0
+    elif rspeed > 100:
+        rspeed = 100
+
+    if lspeed < 0 :
+        lspeed = 0
+    elif lspeed > 100:
+        lspeed = 100
     GPIO.output(MotorRight_PWM,GPIO.HIGH)
     rightmotor(forward0)
     RightPwm.ChangeDutyCycle(rspeed)
