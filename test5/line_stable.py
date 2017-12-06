@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 from go_any import *
-from ultraModule import *
 import time
+import sys
 from functools import reduce
 
 # =======================================================================
@@ -90,9 +90,13 @@ GPIO.setup(rightmostled, GPIO.IN)
 sensor_weight = [-9, -2, 0,2, 9]
 last_error = 0
 error_sum = 0
-
-dt = 0.1
+dt = 0.02
 avoid_flag = False
+
+intersection_case = [[1,1,1,1,1], [0,0,1,1,1], [1,1,1,0,0], [0,1,1,1,1], [1,1,1,1,0]]
+intersection_next_case = [[0,0,0,0,0], [0,0,1,0,0]]
+intersection_direction = [(0, 0, "r"), (0, 1, "r"), (1, 0, "r"), (1,1,"r"), 
+        (2, 0, "l"), (2, 1, "f"), (3, 0, "r"),(3, 1, "r"), (4, 0, "l"), (4, 1, "f")]
 
 def calculatePower():
     left = 50
@@ -100,15 +104,15 @@ def calculatePower():
     turn_left = 50
     turn_right = 50
     kp, kd, ki = 12, 15, 0.4
-#    kp, kd, ki = 10, 17, 0.2
     global last_error, error_sum
     signal_list = get_tracksensor()
     print(signal_list)
 
-    if is_finishline(signal_list):
-        print("stop")
-        stop()
-        return (0, 0)
+    direction = is_intersection(signal_list)
+    if direction != "":
+        print("way to go : " + str(direction))
+        if direction != "f":
+            doing_turn(direction)
 
     error = 0
     sensor_cnt = 0
@@ -118,13 +122,16 @@ def calculatePower():
             sensor_cnt += 1
             flag = flag or True
             error += sensor_weight[idx]
-
     if sensor_cnt == 2:
         error = error/2
 
     pv = 0
     error_derive = 0
-    if not flag:
+    if not flag and error == 0:
+        print('uturn')
+        doing_turn('u')
+        return -1, -1
+    elif not flag:
         print("return to coruse")
         pv = kp * last_error
     else:
@@ -148,29 +155,114 @@ def calculatePower():
 
     return (right, left)
 
-def Avoiding():
-    while  is_on_track():
-        go_forward_any_alignment(10, 45)
-        sleep(0.2)
-    go_forward_any_alignment(50, 50)
-    sleep(0.5)
-    while not  is_on_track():
-        print("are you?")
-        go_forward_any_alignment(80, 10)
-        sleep(0.2)
-
-    #to back line
-    global last_error
-    last_error = 70
-
 def get_tracksensor():
-    ret = [GPIO.input(leftmostled), GPIO.input(leftlessled), GPIO.input(centerled), GPIO.input(rightlessled), GPIO.input(rightmostled)]
+    center = GPIO.input(centerled)
+    rl = GPIO.input(rightlessled)
+    ll = GPIO.input(leftlessled)
+    rm = GPIO.input(rightmostled)
+    lm = GPIO.input(leftmostled)
+    ret = [lm, ll, center, rl, rm]
     return list(map(lambda x : not x, ret))
 
 def is_on_track():
     ret = get_tracksensor()
     result = reduce(lambda a, b: a or b, ret, False)
     return result
+
+def is_almost_lcenter():
+    ret = get_tracksensor()
+    ret = ret[2:4]
+    print("center : ", ret)
+    result = reduce(lambda a, b: a or b, ret, False)
+    return result
+
+def is_almost_rcenter():
+    ret = get_tracksensor()
+    ret = ret[1:3]
+    print("center : ", ret)
+    result = reduce(lambda a, b: a or b, ret, False)
+    return result
+
+def is_on_center():
+    ret = get_tracksensor()
+    flag = ret[0] or ret[1] or ret[3] or ret[4]
+    return ret[2]
+
+def is_intersection(sensor):
+    if sensor in intersection_case:
+        last_idx = intersection_case.index(sensor)
+        print('intersection! : ', sensor)
+        sleep(0.1)
+        sensor = get_tracksensor()
+        print('next intersection! : ', sensor)
+        if True in sensor[1:4]:
+            print(sensor)
+            sensor = [0,0,1,0,0]
+            print("changed")
+        print('next intersection! : ', sensor)
+        if sensor in intersection_next_case:
+            next_idx = intersection_next_case.index(sensor)
+            for direction in intersection_direction:
+                ldx, ndx = direction[0], direction[1]
+                if ldx == last_idx and next_idx == ndx:
+                    return direction[2]
+        else:
+            print("no way")
+            return ""
+    else:
+        return ""
+def doing_turn(direction):
+    right, left = 0, 0
+    if direction == "r":
+        stop()
+        sleep(0.3)
+        left = 45
+        while is_on_track():
+            go_ruturn(30)
+            sleep(0.05)
+        while not is_almost_rcenter():
+            go_ruturn(30)
+            sleep(0.05)
+        stop()
+        sleep(0.3)
+        while not is_on_center():
+            go_luturn(25)
+            sleep(0.05)
+    elif direction == "l":
+        stop()
+        sleep(0.3)
+        right = 40
+        while is_on_track():
+            go_luturn(40)
+            sleep(0.05)
+        while not is_almost_lcenter():
+            go_luturn(40)
+            sleep(0.05)
+        stop()
+        sleep(0.3)
+        while not is_on_center():
+            go_ruturn(25)
+            sleep(0.05)
+    elif direction == "u":
+        sleep(0.3)
+        stop()
+        sleep(0.3)
+        while not is_almost_rcenter():
+            go_ruturn(30)
+            sleep(0.05)
+        stop()
+        sleep(0.3)
+        while not is_on_center():
+            go_luturn(30)
+            sleep(0.05)
+        stop()
+        sleep(0.3)
+        return
+
+    print("fuck turn")
+    stop()
+    sleep(0.1)
+
 
 def is_finishline(sensor):
     n = 0
@@ -180,29 +272,24 @@ def is_finishline(sensor):
     return n>= 4
 
 if __name__ == "__main__":
-    dist = 30
-#    dist = 0
-    count = 0
     try:
         while True:
-            if count % 4 == 0:
-                if dist > getDistance():
-                    print("avoid!!!")
-                    Avoiding()
-                    count = 0
-
             right, left = calculatePower()
             if right== 0 and left == 0:
                 stop()
                 break
-            count += 1
+            elif right == -1 and left == -1:
+                continue
             print(right, left)
 #right, eft
             go_forward_any_alignment(right, left)
-            sleep(0.02)
+            sleep(0.05)
 
     except KeyboardInterrupt:
         pwm_low()
+    except:
+        print "Unexpected error:", sys.exc_info()[0]
+        raise
     finally:
         pwm_low()
 

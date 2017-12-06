@@ -149,13 +149,35 @@ def go_forward_any_alignment(rspeed, lspeed):
         lspeed = 0
     elif lspeed > 100:
         lspeed = 100
-    GPIO.output(MotorRight_PWM,GPIO.HIGH)
     rightmotor(forward0)
     RightPwm.ChangeDutyCycle(rspeed)
 
-    GPIO.output(MotorLeft_PWM,GPIO.HIGH)
     leftmotor(forward1)
     LeftPwm.ChangeDutyCycle(lspeed)
+
+def do_turn(left, right):
+    if left == 0:
+        GPIO.output(MotorLeft_PWM,GPIO.LOW)
+        GPIO.output(MotorRight_PWM,GPIO.HIGH)
+    elif right == 0:
+        GPIO.output(MotorRight_PWM,GPIO.LOW)
+        GPIO.output(MotorLeft_PWM,GPIO.HIGH)
+    RightPwm.ChangeDutyCycle(right)
+    LeftPwm.ChangeDutyCycle(left)
+
+
+
+def go_ruturn(speed):
+    rightmotor(backward0)
+    RightPwm.ChangeDutyCycle(speed+15)
+    leftmotor(forward1)
+    LeftPwm.ChangeDutyCycle(speed)
+
+def go_luturn(speed):
+    rightmotor(forward0)
+    RightPwm.ChangeDutyCycle(speed+15)
+    leftmotor(backward1)
+    LeftPwm.ChangeDutyCycle(speed)
 
 def go_forward_any(speed):
     GPIO.output(MotorRight_PWM,GPIO.HIGH)
